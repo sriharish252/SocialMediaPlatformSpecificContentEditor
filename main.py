@@ -1,7 +1,7 @@
 import streamlit as st
 from socialMedia_crewAI import get_modified_content
 
-st.title("Social Media Platform Specific Content Generator")
+st.title("Social Media Platform Specific Content Editor")
 
 # Get content for user
 content = st.text_area("Content: ")
