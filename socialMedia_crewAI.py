@@ -6,10 +6,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 load_dotenv()   # loads environment variables from .env file
 
-# To load gemini (this api is for free: https://makersuite.google.com/app/apikey)
-api_gemini = os.environ.get("GOOGLE_GEMINI_API_KEY") # In .env file paste apikey for the key GOOGLE_GEMINI_API_KEY
+# Gemini API key from https://aistudio.google.com/apikey, set in .env (see .env.example)
+api_gemini = os.environ.get("GOOGLE_GEMINI_API_KEY")
 gemini_llm = ChatGoogleGenerativeAI(
-    model="gemini-pro", 
+    model=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"),
     verbose=True, 
     temperature=0.1, 
     google_api_key=api_gemini
