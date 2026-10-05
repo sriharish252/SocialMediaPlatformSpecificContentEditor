@@ -1,0 +1,39 @@
+[project]
+name = "social-editor"
+version = "2.0.0"
+description = "Rewrites one post for Instagram, TikTok and LinkedIn with an editor-critic agent loop per platform."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "crewai[google-genai]==1.15.23",
+    "python-dotenv==1.2.4",
+    "streamlit==1.65.0",
+]
+
+[project.optional-dependencies]
+# Anthropic and every other LiteLLM provider (Gemini and OpenAI are built in)
+providers = ["crewai[anthropic,litellm]==1.15.23"]
+
+[project.scripts]
+social-editor = "social_editor.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning:crewai.*"]
