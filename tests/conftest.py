@@ -11,6 +11,7 @@ os.environ.update(
 
 import pytest
 from crewai.llms.base_llm import BaseLLM
+from langchain_tavily._utilities import TavilyExtractAPIWrapper, TavilySearchAPIWrapper
 from pydantic import Field
 
 from social_editor.models import Critique, Draft
@@ -50,9 +51,18 @@ class FakeLLM(BaseLLM):
             raise RuntimeError("rate limited")
         if response_model is Critique:
             return json.dumps({"key_points": ["Lead with the prize", "Add a deadline"]})
+
+        stage = "Final" if from_task.description.startswith("Revise") else "Draft"
+        draft = json.dumps({"text": f"{stage} {platform} post", "hashtags": ["Logo", "#Design"]})
         if response_model is Draft:
-            stage = "Final" if from_task.description.startswith("Revise") else "Draft"
-            return json.dumps({"text": f"{stage} {platform} post", "hashtags": ["Logo", "#Design"]})
+            return draft
+        if from_task.tools:  # CrewAI drops the schema while tools are in play (ReAct format)
+            if not any(m["role"] == "assistant" for m in messages):  # no search yet
+                return (
+                    "Thought: Check which hashtags are in use\nAction: hashtag_search\n"
+                    'Action Input: {"query": "logo contest hashtags"}'
+                )
+            return f"Thought: I now know the final answer\nFinal Answer: {draft}"
         raise AssertionError(f"Unexpected unstructured call: {from_task.description[:40]}")
 
     async def acall(self, messages, **kwargs):
@@ -70,3 +80,22 @@ def llm() -> FakeLLM:
 @pytest.fixture
 def platforms():
     return load_platforms()
+
+
+@pytest.fixture
+def tavily(monkeypatch):
+    """Real langchain-tavily tools with only the HTTP call replaced."""
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+    calls = []
+
+    def search(self, query, **_):
+        calls.append(query)
+        return {"results": [{"title": "Logo contests", "content": "#LogoDesign 12k posts"}]}
+
+    def extract(self, urls, **_):
+        calls.append(urls)
+        return {"results": [{"url": urls[0], "raw_content": "MetalBoys logo contest. " * 2000}]}
+
+    monkeypatch.setattr(TavilySearchAPIWrapper, "raw_results", search)
+    monkeypatch.setattr(TavilyExtractAPIWrapper, "raw_results", extract)
+    return calls

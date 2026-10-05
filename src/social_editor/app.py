@@ -3,6 +3,7 @@ import asyncio
 import streamlit as st
 from dotenv import load_dotenv
 
+from social_editor import web
 from social_editor.config import make_llm, missing_key_error, model_name
 from social_editor.crew import run_platforms
 from social_editor.platforms import load_platforms
@@ -28,6 +29,7 @@ with st.form("editor"):
         "Your content",
         height=180,
         placeholder="Calling all creative minds! The MetalBoys are getting a brand new logo...",
+        help="Paste a post, or a link to an article to repurpose (links need TAVILY_API_KEY).",
     )
     chosen = st.pills(
         "Platforms",
@@ -35,6 +37,13 @@ with st.form("editor"):
         format_func=lambda key: platforms[key].name,
         selection_mode="multi",
         default=list(platforms),
+    )
+    research = st.toggle(
+        "Research current hashtags on the web",
+        value=web.enabled(),
+        disabled=not web.enabled(),
+        help="Before drafting, each editor searches the past month for hashtags in use. "
+        "Needs TAVILY_API_KEY.",
     )
     submitted = st.form_submit_button("Rewrite", type="primary")
 
@@ -46,9 +55,24 @@ if submitted:
         st.warning("Pick at least one platform.")
         st.stop()
 
+    if web.is_url(content):
+        if not web.enabled():
+            st.warning("Reading a link needs TAVILY_API_KEY. Set it, or paste the text instead.")
+            st.stop()
+        url = content.strip()
+        with st.spinner("Reading the article..."):
+            try:
+                content = web.read_article(url)
+            except ValueError as error:
+                st.error(str(error))
+                st.stop()
+        with st.expander(f"Article text from {url}"):
+            st.text(content)
+
     selected = [platforms[key] for key in chosen]
+    tools = [web.hashtag_search()] if research else []
     with st.spinner(f"Editing for {', '.join(p.name for p in selected)} with `{model}`..."):
-        results = asyncio.run(run_platforms(content, selected, make_llm(model)))
+        results = asyncio.run(run_platforms(content, selected, make_llm(model), tools))
 
     tabs = st.tabs([p.name for p in selected])
     for tab, platform, result in zip(tabs, selected, results, strict=True):

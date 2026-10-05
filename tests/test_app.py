@@ -11,7 +11,7 @@ APP = str(Path(config.__file__).with_name("app.py"))
 @pytest.fixture
 def no_keys(monkeypatch):
     # Empty values (rather than unset) also stop load_dotenv() reading a local .env.
-    for name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "MODEL"):
+    for name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "MODEL", "TAVILY_API_KEY"):
         monkeypatch.setenv(name, "")
 
 
@@ -48,3 +48,29 @@ def test_app_shows_each_post_with_its_critique(no_keys, monkeypatch, llm):
     assert [tab.label for tab in at.tabs] == ["Instagram", "TikTok", "LinkedIn"]
     assert at.code[0].value == "Final Instagram post\n\n#Logo #Design"
     assert "Lead with the prize" in at.expander[0].markdown[0].value
+
+
+def test_app_repurposes_a_linked_article_with_hashtag_research(no_keys, monkeypatch, llm, tavily):
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+    monkeypatch.setattr(config, "make_llm", lambda model: llm)
+
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert at.toggle[0].value
+    at.text_area[0].input("https://example.com/metalboys")
+    at.button[0].click().run()
+
+    assert not at.exception
+    assert at.expander[0].label == "Article text from https://example.com/metalboys"
+    assert any("MetalBoys logo contest." in prompt for prompt in llm.log.prompts)
+    assert tavily.count("logo contest hashtags") == 3  # one search per platform's editor
+    assert at.code[0].value == "Final Instagram post\n\n#Logo #Design"
+
+
+def test_links_need_a_tavily_key(no_keys, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    at = AppTest.from_file(APP).run()
+    assert at.toggle[0].disabled
+    at.text_area[0].input("https://example.com/metalboys")
+    at.button[0].click().run()
+    assert "TAVILY_API_KEY" in at.warning[0].value

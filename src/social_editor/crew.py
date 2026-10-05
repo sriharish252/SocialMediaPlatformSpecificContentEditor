@@ -4,10 +4,12 @@ Prompts here are platform-agnostic; everything platform-specific comes from plat
 """
 
 import asyncio
+from collections.abc import Sequence
 
 from crewai import Agent, Crew, Process, Task
 from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools import BaseTool
 from pydantic import BaseModel, ValidationError
 
 from social_editor.models import Critique, Draft, PlatformPost
@@ -19,8 +21,12 @@ feedback is clear, concise and actionable, never harsh for the sake of it."""
 
 FACTS = "Keep every fact from the original (names, dates, prices, links) and never invent new ones."
 
+RESEARCH = """Before writing, run one or two hashtag_search queries to see which hashtags \
+people use for this topic on {platform} right now, and prefer those that fit."""
 
-def build_crew(platform: Platform, llm: BaseLLM) -> Crew:
+
+def build_crew(platform: Platform, llm: BaseLLM, tools: Sequence[BaseTool] = ()) -> Crew:
+    """Tools, if any, go to the draft task only: research once, then critique and rewrite."""
     editor = Agent(
         role=f"{platform.name} Content Editor",
         goal=f"Turn the user's content into a {platform.name} post its audience will engage with",
@@ -38,10 +44,12 @@ def build_crew(platform: Platform, llm: BaseLLM) -> Crew:
         description=(
             f"Rewrite the content below as a {platform.name} post.\n\n"
             f"Platform rules:\n{platform.rules}\n\n{FACTS}\n\n"
-            "Content:\n{content}"
+            + (RESEARCH.format(platform=platform.name) + "\n\n" if tools else "")
+            + "Content:\n{content}"
         ),
         expected_output=f"A {platform.name} post: the text and, separately, its hashtags.",
         agent=editor,
+        tools=list(tools),
         output_pydantic=Draft,
     )
     critique = Task(
@@ -99,12 +107,12 @@ def to_post(platform: Platform, tasks: list[TaskOutput]) -> PlatformPost:
 
 
 async def run_platforms(
-    content: str, platforms: list[Platform], llm: BaseLLM
+    content: str, platforms: list[Platform], llm: BaseLLM, tools: Sequence[BaseTool] = ()
 ) -> list[PlatformPost | Exception]:
     """Run every platform's crew concurrently. A failure in one doesn't sink the others."""
 
     async def run(platform: Platform) -> PlatformPost:
-        result = await build_crew(platform, llm).akickoff(inputs={"content": content})
+        result = await build_crew(platform, llm, tools).akickoff(inputs={"content": content})
         return to_post(platform, result.tasks_output)
 
     return await asyncio.gather(*(run(p) for p in platforms), return_exceptions=True)
