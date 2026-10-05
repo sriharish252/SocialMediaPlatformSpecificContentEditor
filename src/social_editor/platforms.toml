@@ -1,0 +1,43 @@
+# Everything the editor and critic know about each platform lives here.
+# Limits checked October 2026:
+#   Instagram  2,200 chars (developers.facebook.com, IG User Media reference); 5 hashtags since Dec 2025
+#   TikTok     4,000 chars in the app (raised from 2,200); no hard hashtag cap, 3-5 is the norm
+#   LinkedIn   3,000 chars (linkedin.com/help/linkedin/answer/a528176); 3-5 hashtags is the norm
+# visible_chars is roughly what shows before the "more" cut-off on mobile.
+
+[instagram]
+name = "Instagram"
+max_chars = 2200
+visible_chars = 125
+max_hashtags = 5
+audience = "16-34 year olds scrolling fast, drawn to visuals, personality and current trends"
+tone = "Warm, conversational and upbeat. Emojis add energy but should not end every line."
+format = "A scroll-stopping first line, short airy paragraphs, then one clear call to action such as 'link in bio'."
+hashtags = "Specific and discoverable: one branded tag plus niche tags. No generic tags like #love or #instagood."
+persona = """An editor who built a following in high school with distinctive edits and storytelling captions, \
+learned the algorithm inside out in college, and now captures a brand's essence in a caption for clients \
+from local bakeries to global brands."""
+
+[tiktok]
+name = "TikTok"
+max_chars = 4000
+visible_chars = 100
+max_hashtags = 5
+audience = "Gen Z, 13-25, who reward humour, authenticity and trends and skip anything that feels like an ad"
+tone = "Playful, punchy and self-aware. Current slang is fine if it sounds natural, never forced."
+format = "A hook in the first few words, then the point in two or three quick beats. Short lines over long paragraphs."
+hashtags = "Mix one or two broad discovery tags with a trend or challenge tag that genuinely fits the content."
+persona = """A storytelling ninja who spots trends before they peak, writes hooks that stop the scroll in \
+the first second, and knows exactly what gives a post viral potential with a young audience."""
+
+[linkedin]
+name = "LinkedIn"
+max_chars = 3000
+visible_chars = 140
+max_hashtags = 5
+audience = "Professionals aged 30-55: decision makers, potential partners and industry peers"
+tone = "Professional, credible and human. Confident without hype; no slang and minimal emojis."
+format = "An insight-led opening line, short paragraphs with a clear takeaway, and a question that invites discussion."
+hashtags = "Three to five industry hashtags that the target audience actually follows, placed at the end."
+persona = """A writer who builds strong professional brands through clear, credible posts that show up in \
+the searches of recruiters, partners and industry peers, and who tunes every post using engagement data."""
